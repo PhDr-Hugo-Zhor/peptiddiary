@@ -512,6 +512,7 @@
   .dose-amount{font-size:calc(16px * var(--font-scale, 1)); font-weight:600;}
   .dose-pen{font-size:calc(14px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:1px;}
   .dose-note{font-size:calc(13.5px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:2px; font-style:italic;}
+  .dose-shortfall{font-size:calc(12.5px * var(--font-scale, 1)); color:var(--amber); font-weight:650; margin-top:3px;}
   .dose-row.taken .dose-amount,
   .dose-row.taken .dose-pen{color:var(--ink-soft); text-decoration:line-through; text-decoration-color:var(--line);}
   .check-btn{
@@ -1318,8 +1319,44 @@ let selectMode = false;
 let selectedIds = new Set();
 let showTakenInAll = false;
 
+const _shortfallCache = {};
+function penShortfalls(penId){
+  if(_shortfallCache[penId]) return _shortfallCache[penId];
+  const pen = data.pens.find(p=>p.id===penId);
+  const map = {};
+  if(pen){
+    const untaken = data.doses.filter(d=>d.penId===penId && !d.taken)
+      .slice().sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
+    let mgBudget = pen.remaining;
+    let clicksBudget = pen.totalClicks ? pen.remainingClicks : null;
+    untaken.forEach(d=>{
+      let mgShort = 0, clicksShort = 0;
+      if(mgBudget >= d.amount){
+        mgBudget = Math.round((mgBudget - d.amount)*1000)/1000;
+      } else {
+        mgShort = Math.round((d.amount - mgBudget)*1000)/1000;
+        mgBudget = 0;
+      }
+      if(clicksBudget!=null && d.clicksAmount!=null){
+        if(clicksBudget >= d.clicksAmount){
+          clicksBudget = Math.round((clicksBudget - d.clicksAmount)*100)/100;
+        } else {
+          clicksShort = Math.round((d.clicksAmount - clicksBudget)*100)/100;
+          clicksBudget = 0;
+        }
+      }
+      if(mgShort>0 || clicksShort>0){
+        map[d.id] = {mgShort, clicksShort};
+      }
+    });
+  }
+  _shortfallCache[penId] = map;
+  return map;
+}
+
 function renderAgenda(){
   const el = $('agendaContent');
+  Object.keys(_shortfallCache).forEach(k=>delete _shortfallCache[k]);
   let baseDoses = activePenId ? data.doses.filter(d=>d.penId===activePenId) : data.doses;
 
   const dateFilterBar = $('dateFilterBar');
@@ -1372,6 +1409,8 @@ function renderAgenda(){
     doses.forEach(dose=>{
       const pen = data.pens.find(p=>p.id===dose.penId);
       const isSelected = selectedIds.has(dose.id);
+      const sf = penShortfalls(dose.penId)[dose.id];
+      const shortfallHtml = sf ? `<div class="dose-shortfall">chybí ${fmtNum(sf.mgShort)} ${pen?escapeHtml(pen.unit):''}${sf.clicksShort>0?` = ${fmtNum(sf.clicksShort)} kliknutí`:''}</div>` : '';
       const row = document.createElement('div');
       row.className = 'dose-row' + (dose.taken ? ' taken' : '') + (selectMode && isSelected ? ' row-selected' : '');
       row.innerHTML = selectMode ? `
@@ -1381,6 +1420,7 @@ function renderAgenda(){
           <div class="dose-amount num">${fmtNum(dose.amount)} ${pen ? escapeHtml(pen.unit) : ''}</div>
           <div class="dose-pen">${pen ? `<span class="pen-color-swatch" style="background:${getPenColor(pen)}"></span>${escapeHtml(pen.name)}` : '— pero smazáno —'}</div>
           ${dose.note ? `<div class="dose-note">${escapeHtml(dose.note)}</div>` : ''}
+          ${shortfallHtml}
         </div>
       ` : `
         <div class="dose-time num">${dose.time}</div>
@@ -1388,6 +1428,7 @@ function renderAgenda(){
           <div class="dose-amount num">${fmtNum(dose.amount)} ${pen ? escapeHtml(pen.unit) : ''}</div>
           <div class="dose-pen">${pen ? `<span class="pen-color-swatch" style="background:${getPenColor(pen)}"></span>${escapeHtml(pen.name)}` : '— pero smazáno —'}</div>
           ${dose.note ? `<div class="dose-note">${escapeHtml(dose.note)}</div>` : ''}
+          ${shortfallHtml}
         </div>
         <div class="check-btn ${dose.taken ? 'checked' : ''}">✓</div>
       `;
