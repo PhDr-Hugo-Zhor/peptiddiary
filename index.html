@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#2F6F62">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Peptidový deníček">
+<link rel="manifest" href="manifest.json">
+<title>Peptidový deníček</title>
+<style>
+  :root{
+    --font-scale:1;
+    --paper:#F6F7F6;
+    --paper-raised:#FFFFFF;
+    --ink:#1B2430;
+    --ink-soft:#5B6472;
+    --line:#DDE2E1;
+    --teal:#2F6F62;
+    --teal-soft:#E4EEEC;
+    --slate:#5C7A99;
+    --amber:#C97A3D;
+    --amber-soft:#FBEEE2;
+    --red:#B14B4B;
+    --red-soft:#F8E9E9;
+    --overlay-bg:rgba(20,25,30,0.42);
+    --shadow:rgba(0,0,0,0.18);
+    --weekend-bg:#EDEFEE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#15181A;
+      --paper-raised:#1E2225;
+      --ink:#EDEFEF;
+      --ink-soft:#8A949B;
+      --line:#30363A;
+      --teal:#57B39F;
+      --teal-soft:#1E3733;
+      --slate:#7C97AE;
+      --amber:#E0925A;
+      --amber-soft:#3A2C1E;
+      --red:#DE8080;
+      --red-soft:#3A2323;
+      --overlay-bg:rgba(0,0,0,0.6);
+      --shadow:rgba(0,0,0,0.5);
+      --weekend-bg:#20262A;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding-bottom:84px;
+  }
+  .num{
+    font-variant-numeric:tabular-nums;
+    font-feature-settings:"tnum";
+  }
+  .sync-banner{display:none;}
+  header{
+    padding:28px 20px 18px;
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  header h1{
+    margin:0;
+    font-size:calc(23px * var(--font-scale, 1));
+    font-weight:650;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    margin:4px 0 0;
+    color:var(--ink-soft);
+    font-size:calc(15px * var(--font-scale, 1));
+  }
+  main{
+    max-width:520px;
+    margin:0 auto;
+    padding:18px 16px 8px;
+  }
+
+  /* Pen strip */
+  .pens-strip{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding:2px 2px 14px;
+    margin-bottom:6px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .toggle-pens-list{
+    background:none;
+    border:none;
+    color:var(--teal);
+    font-size:calc(12.5px * var(--font-scale, 1));
+    font-weight:600;
+    cursor:pointer;
+    padding:0 2px 14px;
+    display:block;
+  }
+  .pens-list-view{
+    display:none;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .pens-list-view.open{display:flex;}
+  .pens-list-view .pen-tile{min-width:auto; width:100%;}
+  .pen-name-row{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .pen-name-row .pen-name{margin-bottom:0; max-width:none; white-space:normal;}
+  .pen-name-row .pen-interval{margin-bottom:0;}
+  .pen-tile{
+    flex:0 0 auto;
+    min-width:150px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:14px 14px 12px;
+    position:relative;
+    cursor:pointer;
+  }
+  .pen-tile.active{
+    border-color:var(--teal);
+    box-shadow:inset 0 0 0 1px var(--teal);
+  }
+  .pen-edit-btn{
+    position:absolute;
+    top:6px; right:6px;
+    width:22px; height:22px;
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    color:var(--ink-soft);
+    font-size:calc(13px * var(--font-scale, 1));
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .pen-edit-btn:hover{background:var(--teal-soft); color:var(--teal);}
+  .all-tile{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:76px;
+    font-size:calc(15px * var(--font-scale, 1));
+    font-weight:600;
+    color:var(--ink-soft);
+  }
+  .all-tile.active{color:var(--teal);}
+  .pen-tile .pen-name{
+    font-size:calc(14px * var(--font-scale, 1));
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:130px;
+  }
+  .pen-tile .pen-interval{
+    font-size:calc(11.5px * var(--font-scale, 1));
+    color:var(--teal);
+    background:var(--teal-soft);
+    display:inline-block;
+    padding:1px 7px;
+    border-radius:10px;
+    margin-bottom:6px;
+  }
+  .pen-tile .pen-remain{
+    font-size:calc(29px * var(--font-scale, 1));
+    font-weight:650;
+    line-height:1;
+  }
+  .pen-tile .pen-remain span{
+    font-size:calc(15px * var(--font-scale, 1));
+    font-weight:500;
+    color:var(--ink-soft);
+    margin-left:2px;
+  }
+  .pen-tile .pen-clicks{
+    font-size:calc(13px * var(--font-scale, 1));
+    color:var(--ink-soft);
+    margin-top:3px;
+  }
+  .pen-tile .pen-clicks b{
+    font-weight:700;
+    color:var(--ink);
+  }
+  .pen-tile .pen-bar{
+    height:3px;
+    background:var(--line);
+    margin-top:10px;
+    position:relative;
+    overflow:hidden;
+  }
+  .pen-tile .pen-bar i{
+    display:block;
+    height:100%;
+    background:var(--teal);
+  }
+  .pen-tile.low .pen-bar i{background:var(--amber);}
+  .pen-tile.empty .pen-bar i{background:var(--red);}
+  .pen-tile.low .pen-remain{color:var(--amber);}
+  .pen-tile.empty .pen-remain{color:var(--red);}
+  .add-pen-tile{
+    flex:0 0 auto;
+    min-width:90px;
+    border:1px dashed var(--line);
+    border-radius:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    font-size:calc(15px * var(--font-scale, 1));
+    background:transparent;
+    cursor:pointer;
+  }
+  .archive-tile{
+    flex:0 0 auto;
+    min-width:76px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink-soft);
+    font-size:calc(14px * var(--font-scale, 1));
+    background:transparent;
+    cursor:pointer;
+    text-align:center;
+    padding:0 8px;
+  }
+  .archive-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+    gap:10px;
+  }
+  .archive-row:last-child{border-bottom:none;}
+  .archive-row-name{font-weight:600; font-size:calc(16px * var(--font-scale, 1));}
+  .archive-row-sub{font-size:calc(14px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:2px;}
+  .archive-row-actions{display:flex; gap:8px; flex:0 0 auto;}
+  .archive-row-actions button{
+    background:none;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:6px 10px;
+    font-size:calc(13.5px * var(--font-scale, 1));
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .archive-row-actions button.danger{color:var(--red); border-color:var(--red-soft);}
+
+  /* Agenda */
+  .agenda-toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    min-height:26px;
+    margin-bottom:10px;
+    gap:12px;
+  }
+  .select-toggle{
+    background:none;
+    border:none;
+    color:var(--teal);
+    font-size:calc(14.5px * var(--font-scale, 1));
+    font-weight:600;
+    cursor:pointer;
+    padding:4px 2px;
+  }
+  .select-toggle.danger{color:var(--red);}
+  .select-toggle:disabled{color:var(--ink-soft); cursor:default; opacity:0.6;}
+  .toolbar-actions{display:flex; align-items:center; gap:16px;}
+  .bulk-count{font-size:calc(14px * var(--font-scale, 1)); color:var(--ink-soft);}
+  .dose-row.row-selected{
+    background:var(--teal-soft);
+    margin:0 -10px;
+    padding:12px 10px;
+  }
+  .color-swatches{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+    padding:4px 0;
+  }
+  .color-swatch-btn{
+    width:28px; height:28px;
+    border-radius:50%;
+    border:2px solid transparent;
+    cursor:pointer;
+    padding:0;
+  }
+  .color-swatch-btn.selected{
+    border-color:var(--ink);
+    box-shadow:0 0 0 2px var(--paper-raised);
+  }
+  .color-swatch-add{
+    width:28px; height:28px;
+    border-radius:50%;
+    border:1px dashed var(--line);
+    background:none;
+    color:var(--ink-soft);
+    font-size:calc(17px * var(--font-scale, 1));
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  #penColorCustom{
+    position:absolute;
+    width:0; height:0;
+    opacity:0;
+    pointer-events:none;
+  }
+  .custom-color-staging{
+    display:none;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+    padding:8px 10px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+  }
+  .custom-color-preview{
+    width:20px; height:20px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    flex:0 0 auto;
+  }
+  .mini-btn{
+    background:var(--teal-soft);
+    color:var(--teal);
+    border:none;
+    border-radius:6px;
+    padding:5px 10px;
+    font-size:calc(13px * var(--font-scale, 1));
+    font-weight:600;
+    cursor:pointer;
+  }
+  .mini-btn-x{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:calc(15px * var(--font-scale, 1));
+    cursor:pointer;
+    padding:2px 6px;
+    margin-left:auto;
+  }
+  .pen-color-swatch{
+    width:8px; height:8px;
+    border-radius:50%;
+    display:inline-block;
+    margin-right:5px;
+    vertical-align:middle;
+    flex:0 0 auto;
+  }
+  .calendar{ margin-bottom:16px; }
+  .calendar-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .calendar-header .cal-title{
+    font-size:calc(15px * var(--font-scale, 1));
+    font-weight:650;
+    text-transform:capitalize;
+  }
+  .calendar-nav-btn{
+    background:none;
+    border:none;
+    color:var(--ink-soft);
+    font-size:calc(19px * var(--font-scale, 1));
+    line-height:1;
+    cursor:pointer;
+    padding:4px 10px;
+  }
+  .calendar-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:0;
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .calendar-grid > div{
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .calendar-grid > div:nth-child(7n){border-right:none;}
+  .calendar-weekday{
+    text-align:center;
+    font-size:calc(11.5px * var(--font-scale, 1));
+    color:var(--ink-soft);
+    padding:6px 0;
+    background:var(--paper-raised);
+  }
+  .calendar-weekday.weekend{
+    color:var(--slate);
+    background:var(--weekend-bg);
+  }
+  .calendar-day{
+    aspect-ratio:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    cursor:pointer;
+    background:var(--paper-raised);
+  }
+  .calendar-day.weekend{background:var(--weekend-bg);}
+  .calendar-day.empty{cursor:default; background:var(--paper);}
+  .calendar-day .cal-daynum{font-size:calc(13px * var(--font-scale, 1)); color:var(--ink);}
+  .calendar-day.today .cal-daynum{color:var(--teal); font-weight:700;}
+  .calendar-day.selected{background:var(--teal-soft) !important;}
+  .calendar-dots{
+    display:flex;
+    gap:2px;
+    flex-wrap:wrap;
+    justify-content:center;
+    max-width:24px;
+  }
+  .calendar-dot{width:5px; height:5px; border-radius:50%;}
+  .calendar-dot.taken{opacity:0.35;}
+  .file-info-card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:12px 14px;
+    margin:-6px 0 14px;
+    font-size:calc(14px * var(--font-scale, 1));
+    line-height:1.6;
+  }
+  .file-info-card .fic-name{
+    font-weight:650;
+    margin-bottom:5px;
+    word-break:break-all;
+  }
+  .file-info-card .fic-line{
+    color:var(--ink-soft);
+    font-size:calc(13.5px * var(--font-scale, 1));
+  }
+  .file-info-card .fic-pen-row{
+    display:flex;
+    align-items:center;
+    font-size:calc(13.5px * var(--font-scale, 1));
+    padding:3px 0;
+    color:var(--ink);
+  }
+  .file-info-card .fic-pen-row b{font-weight:650;}
+  .date-filter-bar{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--teal-soft);
+    color:var(--teal);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:calc(14px * var(--font-scale, 1));
+    margin-bottom:10px;
+  }
+  .date-filter-bar button{
+    background:none; border:none; color:var(--teal);
+    font-weight:600; cursor:pointer; font-size:calc(14px * var(--font-scale, 1));
+  }
+  .day-group{margin-bottom:22px;}
+  .day-label{
+    font-size:calc(14px * var(--font-scale, 1));
+    font-weight:650;
+    color:var(--ink-soft);
+    margin-bottom:2px;
+    text-transform:capitalize;
+  }
+  .day-label.today{color:var(--teal); font-weight:650;}
+  .dose-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .dose-row:last-child{border-bottom:none;}
+  .dose-time{
+    width:48px;
+    flex:0 0 auto;
+    font-size:calc(15px * var(--font-scale, 1));
+    font-weight:600;
+  }
+  .dose-info{flex:1; min-width:0;}
+  .dose-amount{font-size:calc(16px * var(--font-scale, 1)); font-weight:600;}
+  .dose-pen{font-size:calc(14px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:1px;}
+  .dose-note{font-size:calc(13.5px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:2px; font-style:italic;}
+  .dose-row.taken .dose-amount,
+  .dose-row.taken .dose-pen{color:var(--ink-soft); text-decoration:line-through; text-decoration-color:var(--line);}
+  .check-btn{
+    flex:0 0 auto;
+    width:30px;height:30px;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    background:var(--paper-raised);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:transparent;
+  }
+  .check-btn.checked{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .select-box{
+    flex:0 0 auto;
+    width:26px;height:26px;
+    border-radius:7px;
+    border:1.5px solid var(--line);
+    background:var(--paper-raised);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    color:transparent;
+  }
+  .select-box.checked{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  .empty-note{
+    color:var(--ink-soft);
+    font-size:calc(15px * var(--font-scale, 1));
+    padding:30px 4px;
+    text-align:center;
+  }
+
+  /* Floating add button */
+  .fab{
+    position:fixed;
+    right:20px;
+    bottom:24px;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    width:54px;height:54px;
+    border-radius:50%;
+    font-size:calc(27px * var(--font-scale, 1));
+    line-height:1;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 10px var(--shadow);
+    cursor:pointer;
+    z-index:10;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0;
+    background:var(--overlay-bg);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:20;
+  }
+  .overlay.open{display:flex;}
+  #confirmOverlay{ z-index:30; }
+  .sheet{
+    background:var(--paper-raised);
+    width:100%;
+    max-width:520px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:14px 14px 0 0;
+    padding:22px 20px calc(24px + env(safe-area-inset-bottom));
+  }
+  .sheet h2{
+    margin:0 0 18px;
+    font-size:calc(19px * var(--font-scale, 1));
+    font-weight:650;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:calc(13.5px * var(--font-scale, 1));
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input, .field select, .field textarea{
+    width:100%;
+    padding:10px 11px;
+    font-size:calc(16px * var(--font-scale, 1));
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:inherit;
+  }
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .sheet-actions{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+  }
+  .btn{
+    flex:1;
+    padding:12px;
+    border-radius:6px;
+    border:none;
+    font-size:calc(16px * var(--font-scale, 1));
+    font-weight:600;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--teal); color:#fff;}
+  .btn-secondary{background:var(--paper); color:var(--ink-soft); border:1px solid var(--line);}
+  .btn-danger{background:var(--red-soft); color:var(--red);}
+  .hint{font-size:calc(13px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:4px;}
+  .click-field{
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--line);
+  }
+  .toast{
+    position:fixed;
+    top:14px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#1B2430;
+    color:#fff;
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:calc(14.5px * var(--font-scale, 1));
+    z-index:40;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+  .loading{
+    text-align:center;
+    color:var(--ink-soft);
+    padding:40px 0;
+    font-size:calc(15px * var(--font-scale, 1));
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Peptidový deníček</h1>
+  <p id="subhead">Načítám…</p>
+  <p style="margin:2px 0 0; font-size:calc(12.5px * var(--font-scale, 1)); display:flex; align-items:center; gap:10px;">
+    <span id="savedIndicator" style="color:var(--ink-soft);"></span>
+    <button id="openBackup" style="background:none; border:none; color:var(--teal); font-size:calc(12.5px * var(--font-scale, 1)); font-weight:600; cursor:pointer; padding:0;">Zálohovat</button>
+    <button id="openRestore" style="background:none; border:none; color:var(--teal); font-size:calc(12.5px * var(--font-scale, 1)); font-weight:600; cursor:pointer; padding:0;">Obnovit</button>
+    <button id="openFontSize" style="background:none; border:none; color:var(--teal); font-size:calc(12.5px * var(--font-scale, 1)); font-weight:600; cursor:pointer; padding:0;">Velikost textu</button>
+  </p>
+</header>
+
+<main>
+  <div class="pens-strip" id="pensStrip"></div>
+  <button type="button" class="toggle-pens-list" id="togglePensList">Zobrazit seznam per ▾</button>
+  <div class="pens-list-view" id="pensListView"></div>
+
+  <div id="calendarWrap" style="display:none;"></div>
+  <div id="dateFilterBar" class="date-filter-bar"></div>
+
+  <div class="agenda-toolbar" id="agendaToolbar" style="display:none;">
+    <span class="bulk-count" id="bulkCount" style="display:none;">0 vybráno</span>
+    <div class="toolbar-actions">
+      <button class="select-toggle" id="toggleTakenBtn" style="display:none;">Zobrazit i podané</button>
+      <button class="select-toggle" id="bulkCancel" style="display:none;">Zrušit</button>
+      <button class="select-toggle danger" id="bulkDelete" style="display:none;">Smazat</button>
+      <button class="select-toggle" id="selectToggle">Vybrat dávky</button>
+    </div>
+  </div>
+  <div id="agendaContent" class="loading">Načítám…</div>
+</main>
+
+<button class="fab" id="fabAdd">+</button>
+
+<!-- Add dose sheet -->
+<div class="overlay" id="doseOverlay">
+  <div class="sheet">
+    <h2 id="doseSheetTitle">Nová dávka</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>Datum</label>
+        <input type="date" id="doseDate">
+      </div>
+      <div class="field">
+        <label>Čas</label>
+        <input type="time" id="doseTime" value="08:00">
+      </div>
+    </div>
+    <div class="field">
+      <label>Pero</label>
+      <select id="dosePen"></select>
+    </div>
+    <div class="field">
+      <label>Dávka</label>
+      <input type="number" id="doseAmount" step="any" min="0" placeholder="např. 0.25">
+      <div class="hint" id="doseUnitHint"></div>
+    </div>
+    <div class="field click-field" id="doseClicksField" style="display:none;">
+      <label>…nebo v kliknutích</label>
+      <input type="number" id="doseAmountClicks" step="1" min="0" placeholder="např. 20">
+      <div class="hint" id="doseClicksHint"></div>
+    </div>
+    <div class="field">
+      <label>Poznámka (nepovinné)</label>
+      <input type="text" id="doseNote" placeholder="např. levé stehno">
+    </div>
+    <div class="field" id="applyScopeField" style="display:none;">
+      <label>Uložit změnu pro</label>
+      <select id="applyScope">
+        <option value="one">Jen tuto dávku</option>
+        <option value="following">Tuto a všechny následující dávky ze série</option>
+      </select>
+    </div>
+    <div id="repeatSection">
+      <div class="field">
+        <label>Opakovat</label>
+        <select id="doseRepeat">
+          <option value="days|1|1">Jednou</option>
+          <option value="days|1|7">Denně, 7×</option>
+          <option value="days|1|14">Denně, 14×</option>
+          <option value="weeks|1|4">Týdně, 4×</option>
+          <option value="weeks|1|8">Týdně, 8×</option>
+          <option value="months|1|3">Měsíčně, 3×</option>
+          <option value="months|1|6">Měsíčně, 6×</option>
+          <option value="custom">Vlastní…</option>
+          <option value="untilEmpty">Do vyčerpání pera</option>
+        </select>
+      </div>
+      <div class="field-row" id="customRepeatRow" style="display:none;">
+        <div class="field">
+          <label>Interval</label>
+          <input type="number" id="repeatInterval" min="1" value="1">
+        </div>
+        <div class="field">
+          <label>Frekvence</label>
+          <select id="repeatFrequency">
+            <option value="days">Dny</option>
+            <option value="weeks">Týdny</option>
+            <option value="months">Měsíce</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Počet opakování</label>
+          <input type="number" id="repeatCount" min="1" value="1">
+        </div>
+      </div>
+      <div class="field-row" id="untilEmptyRow" style="display:none;">
+        <div class="field">
+          <label>Interval</label>
+          <input type="number" id="untilEmptyInterval" min="1" value="1">
+        </div>
+        <div class="field">
+          <label>Frekvence</label>
+          <select id="untilEmptyFrequency">
+            <option value="days">Dny</option>
+            <option value="weeks">Týdny</option>
+            <option value="months">Měsíce</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Počet dávek (odhad)</label>
+          <input type="text" id="untilEmptyCount" disabled>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="doseCancel">Zrušit</button>
+      <button class="btn btn-primary" id="doseSave">Uložit</button>
+    </div>
+    <div class="sheet-actions" id="doseDeleteRow" style="display:none;">
+      <button class="btn btn-danger" id="doseDelete">Smazat dávku</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/edit pen sheet -->
+<div class="overlay" id="penOverlay">
+  <div class="sheet">
+    <h2 id="penSheetTitle">Nové pero</h2>
+    <div class="field">
+      <label>Název</label>
+      <input type="text" id="penName" placeholder="např. Retatrutid #1">
+    </div>
+    <div class="field">
+      <label>Barva</label>
+      <div class="custom-color-staging" id="customColorStaging">
+        <span class="custom-color-preview" id="customColorPreview"></span>
+        <span class="hint" id="customColorLabel" style="margin:0;">Nová vlastní barva</span>
+        <button type="button" class="mini-btn" id="customColorOk" style="display:none;">OK</button>
+        <button type="button" class="mini-btn" id="customColorApply" style="display:none;">Použít</button>
+        <button type="button" class="mini-btn" id="customColorSave" style="display:none;">Uložit do palety</button>
+        <button type="button" class="mini-btn-x" id="customColorCancel">✕</button>
+      </div>
+      <div class="color-swatches" id="colorSwatches"></div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Celkový objem</label>
+        <input type="number" id="penTotal" step="any" min="0" placeholder="např. 5">
+      </div>
+      <div class="field">
+        <label>Jednotka</label>
+        <input type="text" id="penUnit" placeholder="mg / ml / IU">
+      </div>
+    </div>
+    <div class="field" id="penRemainField" style="display:none;">
+      <label>Aktuální zůstatek</label>
+      <input type="number" id="penRemain" step="any" min="0">
+    </div>
+    <div class="field click-field">
+      <label>Počet kliknutí na celé pero (nepovinné)</label>
+      <input type="number" id="penClicks" min="0" step="1" placeholder="např. 300">
+      <div class="hint">Umožní zadávat dávky v kliknutích s přepočtem na jednotku výše.</div>
+    </div>
+    <div class="field" id="penRemainClicksField" style="display:none;">
+      <label>Aktuální zůstatek v kliknutích</label>
+      <input type="number" id="penRemainClicks" min="0" step="1">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="penCancel">Zrušit</button>
+      <button class="btn btn-primary" id="penSave">Uložit</button>
+    </div>
+    <div class="hint" id="penArchiveHint" style="display:none; margin-top:6px;">Archivace pero jen schová z přehledu a záložek — historie dávek zůstane zachovaná a pero jde kdykoli obnovit.</div>
+    <div class="sheet-actions" id="penDeleteRow" style="display:none;">
+      <button class="btn btn-secondary" id="penArchive">Archivovat pero</button>
+    </div>
+    <div class="sheet-actions" id="penHardDeleteRow" style="display:none;">
+      <button class="btn btn-danger" id="penDelete">Smazat natrvalo (i s historií)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Font size sheet -->
+<div class="overlay" id="fontSizeOverlay">
+  <div class="sheet">
+    <h2>Velikost textu</h2>
+    <div class="hint" style="margin-bottom:18px;">Přetažením posuvníku se velikost textu mění hned v appce na pozadí. Potvrďte tlačítkem OK, nebo zrušte beze změny.</div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+      <span style="font-size:14px; color:var(--ink-soft);">A</span>
+      <input type="range" id="fontScaleSlider" min="0.85" max="1.5" step="0.05" value="1" style="flex:1;">
+      <span style="font-size:26px; color:var(--ink-soft);">A</span>
+    </div>
+    <div class="hint" id="fontScaleValue" style="text-align:center; margin-bottom:20px;">100 %</div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="fontSizeCancel">Zrušit</button>
+      <button class="btn btn-primary" id="fontSizeOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog (native confirm() is blocked in this sandboxed environment) -->
+<div class="overlay" id="confirmOverlay">
+  <div class="sheet">
+    <h2 id="confirmTitle">Potvrdit</h2>
+    <p id="confirmMessage" style="margin:0 0 20px; color:var(--ink-soft); font-size:calc(15px * var(--font-scale, 1)); line-height:1.5;"></p>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Zrušit</button>
+      <button class="btn btn-danger" id="confirmOk">Smazat</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Archive sheet -->
+<div class="overlay" id="archiveOverlay">
+  <div class="sheet">
+    <h2>Archiv per</h2>
+    <div id="archiveList"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="archiveCancel">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backup sheet (export only) -->
+<div class="overlay" id="backupOverlay">
+  <div class="sheet">
+    <h2>Zálohovat data</h2>
+    <div class="hint" style="margin-bottom:14px;">Záloha obsahuje všechna pera i celý naplánovaný rozpis dávek — nezávisle na cloudovém úložišti.</div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-primary" id="backupDownload">Stáhnout zálohu (soubor)</button>
+    </div>
+
+    <div style="border-top:1px solid var(--line); margin:18px 0 14px;"></div>
+    <div class="hint" style="margin-bottom:8px;">Nejde stažení souboru na vašem zařízení? Použijte text ručně:</div>
+    <textarea id="backupText" spellcheck="false" style="width:100%; min-height:160px; font-family:monospace; font-size:calc(13px * var(--font-scale, 1)); padding:10px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); resize:vertical;"></textarea>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="backupCopy">Kopírovat text</button>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="backupClose">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore sheet (import only) -->
+<div class="overlay" id="restoreOverlay">
+  <div class="sheet">
+    <h2>Obnovit ze zálohy</h2>
+    <div class="hint" style="margin-bottom:14px;">Obnovení přepíše aktuální pera i rozpis dávek obsahem zálohy.</div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="restorePickFile">Vybrat soubor zálohy…</button>
+    </div>
+    <input type="file" id="restoreFileInput" accept="application/json,.json" style="display:none">
+    <div class="file-info-card" id="restoreFileInfo" style="display:none;"></div>
+    <div class="sheet-actions" id="restoreFileRow" style="display:none;">
+      <button class="btn btn-danger" id="restoreFromFile">Obnovit z vybraného souboru</button>
+    </div>
+
+    <div style="border-top:1px solid var(--line); margin:18px 0 14px;"></div>
+    <div class="hint" style="margin-bottom:8px;">Nebo vložte text zálohy ručně:</div>
+    <textarea id="restoreText" spellcheck="false" style="width:100%; min-height:160px; font-family:monospace; font-size:calc(13px * var(--font-scale, 1)); padding:10px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); resize:vertical;"></textarea>
+    <div class="sheet-actions">
+      <button class="btn btn-danger" id="restoreFromText">Obnovit z textu</button>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="restoreClose">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'tracker-data';
+let data = { pens: [], doses: [], customPenColors: [] };
+let editingPenId = null;
+
+const $ = id => document.getElementById(id);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const todayStr = () => new Date().toISOString().slice(0,10);
+
+function showToast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+let confirmResolve = null;
+function customConfirm(message, okLabel){
+  return new Promise(resolve=>{
+    confirmResolve = resolve;
+    $('confirmMessage').textContent = message;
+    $('confirmOk').textContent = okLabel || 'Smazat';
+    $('confirmOverlay').classList.add('open');
+  });
+}
+$('confirmOk').onclick = () => {
+  $('confirmOverlay').classList.remove('open');
+  if(confirmResolve) confirmResolve(true);
+  confirmResolve = null;
+};
+$('confirmCancel').onclick = () => {
+  $('confirmOverlay').classList.remove('open');
+  if(confirmResolve) confirmResolve(false);
+  confirmResolve = null;
+};
+
+async function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      data = JSON.parse(raw);
+      data.pens = data.pens || [];
+      data.doses = data.doses || [];
+      data.customPenColors = data.customPenColors || [];
+      data.fontScale = data.fontScale || 1;
+    }
+  }catch(e){
+    console.error('loadData failed:', e);
+    data = { pens: [], doses: [], customPenColors: [], fontScale: 1 };
+  }
+  document.documentElement.style.setProperty('--font-scale', data.fontScale || 1);
+  render();
+}
+
+let lastSavedAt = null;
+
+function updateSavedIndicator(){
+  if(!lastSavedAt) return;
+  const hh = String(lastSavedAt.getHours()).padStart(2,'0');
+  const mm = String(lastSavedAt.getMinutes()).padStart(2,'0');
+  $('savedIndicator').textContent = `Uloženo ${hh}:${mm}`;
+}
+
+async function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    lastSavedAt = new Date();
+    updateSavedIndicator();
+    return true;
+  }catch(e){
+    console.error('saveData failed:', e);
+    showToast('Uložení se nezdařilo — možná je paměť telefonu plná. Doporučujeme zálohovat.');
+    return false;
+  }
+}
+
+function fmtNum(n){
+  const r = Math.round(n*100)/100;
+  return r.toString();
+}
+
+function dayLabel(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d-today)/86400000);
+  const weekday = d.toLocaleDateString('cs-CZ', {weekday:'long'});
+  const full = d.toLocaleDateString('cs-CZ', {day:'numeric', month:'long'});
+  if(diff===0) return {text:'Dnes, '+full, today:true};
+  if(diff===1) return {text:'Zítra, '+full, today:false};
+  if(diff===-1) return {text:'Včera, '+full, today:false};
+  return {text: weekday+', '+full, today:false};
+}
+
+let activePenId = null; // null = "Vše" (all pens combined)
+let calendarMonth = (() => { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d; })();
+let calendarSelectedDate = null;
+
+const PEN_COLORS = ['#5B8DEF','#E17FA8','#8E7CC3','#4FB8A6','#E0925A','#6FA85B','#C97AC9','#4AA3C4'];
+let selectedPenColor = PEN_COLORS[0];
+
+function renderColorSwatches(){
+  const wrap = $('colorSwatches');
+  const customColorsHtml = (data.customPenColors||[]).map(c =>
+    `<button type="button" class="color-swatch-btn" data-color="${c}" style="background:${c}"></button>`
+  ).join('');
+  const presetHtml = PEN_COLORS.map(c =>
+    `<button type="button" class="color-swatch-btn" data-color="${c}" style="background:${c}"></button>`
+  ).join('');
+  wrap.innerHTML = presetHtml + customColorsHtml
+    + `<button type="button" class="color-swatch-add" id="addCustomColorBtn" title="Vlastní barva">+</button>`
+    + `<input type="color" id="penColorCustom">`;
+  wrap.querySelectorAll('.color-swatch-btn').forEach(btn=>{
+    btn.onclick = () => selectPenColor(btn.dataset.color);
+  });
+  $('addCustomColorBtn').onclick = () => $('penColorCustom').click();
+  // live preview while the native picker is still open — confirmed only via our own OK button
+  $('penColorCustom').addEventListener('input', (e) => showColorPickPrompt(e.target.value));
+  // fallback for cases where the picker closes without our OK being clicked (e.g. Escape)
+  $('penColorCustom').addEventListener('change', (e) => {
+    if($('customColorOk').style.display !== 'none'){
+      showColorPickPrompt(e.target.value);
+    }
+  });
+}
+let pendingCustomColor = null;
+function showColorPickPrompt(color){
+  pendingCustomColor = color;
+  $('customColorStaging').style.display = 'flex';
+  $('customColorPreview').style.background = color;
+  $('customColorLabel').textContent = 'Vybíráte barvu…';
+  $('customColorOk').style.display = 'inline-block';
+  $('customColorApply').style.display = 'none';
+  $('customColorSave').style.display = 'none';
+  $('customColorOk').onclick = () => {
+    $('penColorCustom').blur();
+    showCustomColorStaging(pendingCustomColor);
+  };
+}
+function showCustomColorStaging(color){
+  $('customColorStaging').style.display = 'flex';
+  $('customColorPreview').style.background = color;
+  $('customColorLabel').textContent = 'Nová vlastní barva';
+  $('customColorOk').style.display = 'none';
+  $('customColorApply').style.display = 'inline-block';
+  $('customColorSave').style.display = 'inline-block';
+  $('customColorApply').onclick = () => {
+    selectPenColor(color);
+    hideCustomColorStaging();
+  };
+  $('customColorSave').onclick = async () => {
+    data.customPenColors = data.customPenColors || [];
+    if(!data.customPenColors.some(c=>c.toLowerCase()===color.toLowerCase())){
+      data.customPenColors.push(color);
+      if(data.customPenColors.length>5) data.customPenColors.shift();
+      await saveData();
+    }
+    renderColorSwatches();
+    selectPenColor(color);
+    hideCustomColorStaging();
+  };
+  $('customColorCancel').onclick = hideCustomColorStaging;
+}
+function hideCustomColorStaging(){
+  $('customColorStaging').style.display = 'none';
+  pendingCustomColor = null;
+}
+function selectPenColor(color){
+  selectedPenColor = color;
+  document.querySelectorAll('.color-swatch-btn').forEach(b=>{
+    b.classList.toggle('selected', b.dataset.color.toLowerCase()===color.toLowerCase());
+  });
+  $('penColorCustom').value = color;
+}
+function getPenColor(pen){
+  if(pen.color) return pen.color;
+  const idx = data.pens.findIndex(p=>p.id===pen.id);
+  return PEN_COLORS[(idx<0?0:idx) % PEN_COLORS.length];
+}
+function toDateStr(d){
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function shiftDateByDays(dateStr, delta){
+  const d = new Date(dateStr+'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  return toDateStr(d);
+}
+function addInterval(baseDate, unit, n){
+  const d = new Date(baseDate);
+  if(unit==='weeks') d.setDate(d.getDate() + n*7);
+  else if(unit==='months') d.setMonth(d.getMonth() + n);
+  else d.setDate(d.getDate() + n); // days (also the default)
+  return d;
+}
+function czWeekdayAbbrev(dateStr){
+  const labels = ['Ne','Po','Út','St','Čt','Pá','So']; // Date.getDay(): 0=Sun..6=Sat
+  return labels[new Date(dateStr+'T00:00:00').getDay()];
+}
+function detectPenInterval(pen){
+  const dates = [...new Set(data.doses.filter(d=>d.penId===pen.id).map(d=>d.date))].sort();
+  if(dates.length<2) return null;
+  const gaps = [];
+  for(let i=1;i<dates.length;i++){
+    const d1 = new Date(dates[i-1]+'T00:00:00');
+    const d2 = new Date(dates[i]+'T00:00:00');
+    gaps.push(Math.round((d2-d1)/86400000));
+  }
+  const first = gaps[0];
+  if(first<=0 || !gaps.every(g=>g===first)) return null;
+  const anchor = dates[0];
+  if(first===1) return 'denně';
+  if(first===7) return `týdně (${czWeekdayAbbrev(anchor)})`;
+  if(first===14) return `co 2 týdny (${czWeekdayAbbrev(anchor)})`;
+  if(first>=28 && first<=31) return `měsíčně (${new Date(anchor+'T00:00:00').getDate()}.)`;
+  return `co ${first} ${first<5?'dny':'dní'}`;
+}
+function referenceClicksPerDose(pen){
+  const penDoses = data.doses.filter(d=>d.penId===pen.id && d.clicksAmount!=null && d.clicksAmount>0);
+  if(penDoses.length===0) return null;
+  const todayStrVal = todayStr();
+  const upcoming = penDoses.filter(d=>!d.taken && d.date>=todayStrVal).sort((a,b)=>a.date.localeCompare(b.date));
+  const reference = upcoming[0] || penDoses.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+  return (reference && reference.clicksAmount) ? reference.clicksAmount : null;
+}
+function estimateRemainingDoses(pen){
+  if(!pen.totalClicks || !pen.remainingClicks) return null;
+  const perDose = referenceClicksPerDose(pen);
+  if(!perDose) return null;
+  return Math.floor(pen.remainingClicks / perDose);
+}
+function estimateTotalDoses(pen){
+  if(!pen.totalClicks) return null;
+  const perDose = referenceClicksPerDose(pen);
+  if(!perDose) return null;
+  return Math.floor(pen.totalClicks / perDose);
+}
+
+function buildPenTileEl(p, listView){
+  const pct = p.total>0 ? p.remaining/p.total : 0;
+  const div = document.createElement('div');
+  div.className = 'pen-tile' + (activePenId===p.id ? ' active' : '') + (p.remaining<=0 ? ' empty' : (pct<=0.15 ? ' low' : ''));
+  const nameHtml = `<div class="pen-name"><span class="pen-color-swatch" style="background:${getPenColor(p)}"></span>${escapeHtml(p.name)}</div>`;
+  const intervalHtml = detectPenInterval(p) ? `<div class="pen-interval">${detectPenInterval(p)}</div>` : '';
+  const headerHtml = listView
+    ? `<div class="pen-name-row">${nameHtml}${intervalHtml}</div>`
+    : `${nameHtml}${intervalHtml}`;
+  let clicksHtml = '';
+  if(p.totalClicks){
+    const remEst = estimateRemainingDoses(p);
+    if(listView){
+      const totalEst = estimateTotalDoses(p);
+      const doseFrag = (remEst!=null && totalEst!=null) ? ` = <b>${remEst}</b>/${totalEst} dávek` : '';
+      clicksHtml = `<div class="pen-clicks num"><b>${fmtNum(p.remainingClicks)}</b>/${fmtNum(p.totalClicks)} kliknutí${doseFrag}</div>`;
+    } else {
+      const doseFrag = remEst!=null ? ` = <b>${remEst}</b> ${remEst===1?'dávka':(remEst<5?'dávky':'dávek')}` : '';
+      clicksHtml = `<div class="pen-clicks num"><b>${fmtNum(p.remainingClicks)}</b> kliknutí${doseFrag}</div>`;
+    }
+  }
+  div.innerHTML = `
+    <button class="pen-edit-btn" title="Upravit pero">✎</button>
+    ${headerHtml}
+    <div class="pen-remain num">${fmtNum(p.remaining)}<span>${escapeHtml(p.unit)}</span></div>
+    ${clicksHtml}
+    <div class="pen-bar"><i style="width:${Math.max(0,Math.min(100,pct*100))}%"></i></div>
+  `;
+  div.onclick = () => setActivePen(p.id);
+  div.querySelector('.pen-edit-btn').onclick = (e) => { e.stopPropagation(); openPenSheet(p.id); };
+  return div;
+}
+
+function renderPensStrip(){
+  const strip = $('pensStrip');
+  strip.innerHTML = '';
+
+  const allTile = document.createElement('div');
+  allTile.className = 'pen-tile all-tile' + (activePenId===null ? ' active' : '');
+  allTile.textContent = 'Vše';
+  allTile.onclick = () => setActivePen(null);
+  strip.appendChild(allTile);
+
+  const activePens = data.pens.filter(p=>!p.archived);
+  activePens.forEach(p=> strip.appendChild(buildPenTileEl(p)));
+
+  const addTile = document.createElement('div');
+  addTile.className = 'add-pen-tile';
+  addTile.textContent = '+ pero';
+  addTile.onclick = () => openPenSheet(null);
+  strip.appendChild(addTile);
+
+  const archived = data.pens.filter(p=>p.archived);
+  if(archived.length>0){
+    const archiveTile = document.createElement('div');
+    archiveTile.className = 'archive-tile';
+    archiveTile.textContent = `Archiv (${archived.length})`;
+    archiveTile.onclick = openArchiveSheet;
+    strip.appendChild(archiveTile);
+  }
+}
+
+let pensListExpanded = false;
+function renderPensListView(){
+  const container = $('pensListView');
+  container.innerHTML = '';
+  const activePens = data.pens.filter(p=>!p.archived);
+  activePens.forEach(p=> container.appendChild(buildPenTileEl(p, true)));
+}
+function togglePensListView(){
+  pensListExpanded = !pensListExpanded;
+  $('pensListView').classList.toggle('open', pensListExpanded);
+  $('togglePensList').textContent = pensListExpanded ? 'Skrýt seznam per ▴' : 'Zobrazit seznam per ▾';
+  if(pensListExpanded) renderPensListView();
+}
+$('togglePensList').onclick = togglePensListView;
+
+function openArchiveSheet(){
+  renderArchiveList();
+  $('archiveOverlay').classList.add('open');
+}
+
+function renderArchiveList(){
+  const el = $('archiveList');
+  const archived = data.pens.filter(p=>p.archived);
+  if(archived.length===0){
+    el.innerHTML = '<div class="empty-note">Archiv je prázdný.</div>';
+    return;
+  }
+  el.innerHTML = '';
+  archived.forEach(p=>{
+    const doseCount = data.doses.filter(d=>d.penId===p.id).length;
+    const row = document.createElement('div');
+    row.className = 'archive-row';
+    row.innerHTML = `
+      <div>
+        <div class="archive-row-name">${escapeHtml(p.name)}</div>
+        <div class="archive-row-sub num">${fmtNum(p.remaining)} / ${fmtNum(p.total)} ${escapeHtml(p.unit)} · ${doseCount} ${doseCount===1?'dávka':(doseCount<5?'dávky':'dávek')} v historii</div>
+      </div>
+      <div class="archive-row-actions">
+        <button class="restore-btn">Obnovit</button>
+        <button class="hard-delete-btn danger">Smazat natrvalo</button>
+      </div>
+    `;
+    row.querySelector('.restore-btn').onclick = () => restorePen(p.id);
+    row.querySelector('.hard-delete-btn').onclick = () => hardDeletePenFromArchive(p.id, p.name);
+    el.appendChild(row);
+  });
+}
+
+async function restorePen(penId){
+  const pen = data.pens.find(p=>p.id===penId);
+  if(pen) pen.archived = false;
+  renderArchiveList();
+  render();
+  await saveData();
+  showToast('Pero obnoveno');
+}
+
+async function hardDeletePenFromArchive(penId, name){
+  if(!(await customConfirm(`Opravdu trvale smazat pero „${name}" včetně celé historie dávek? Tuto akci nelze vrátit zpět.`))) return;
+  data.pens = data.pens.filter(p=>p.id!==penId);
+  data.doses = data.doses.filter(d=>d.penId!==penId);
+  renderArchiveList();
+  render();
+  await saveData();
+  showToast('Pero trvale smazáno');
+}
+$('archiveCancel').onclick = () => $('archiveOverlay').classList.remove('open');
+
+let selectMode = false;
+let selectedIds = new Set();
+let showTakenInAll = false;
+
+function renderAgenda(){
+  const el = $('agendaContent');
+  let baseDoses = activePenId ? data.doses.filter(d=>d.penId===activePenId) : data.doses;
+
+  const dateFilterBar = $('dateFilterBar');
+  if(activePenId===null && calendarSelectedDate){
+    baseDoses = baseDoses.filter(d=>d.date===calendarSelectedDate);
+    dateFilterBar.style.display = 'flex';
+    dateFilterBar.innerHTML = `<span>Zobrazeno: ${dayLabel(calendarSelectedDate).text}</span><button id="clearDateFilter">Zobrazit vše ✕</button>`;
+    $('clearDateFilter').onclick = () => { calendarSelectedDate = null; renderCalendar(); renderAgenda(); };
+  } else {
+    dateFilterBar.style.display = 'none';
+  }
+
+  const hideTaken = activePenId===null && !showTakenInAll;
+  const doses = hideTaken ? baseDoses.filter(d=>!d.taken) : baseDoses;
+  const takenCount = baseDoses.filter(d=>d.taken).length;
+
+  if(activePenId===null && takenCount>0 && !selectMode){
+    $('toggleTakenBtn').style.display = 'inline-block';
+    $('toggleTakenBtn').textContent = showTakenInAll ? 'Skrýt podané' : `Zobrazit i podané (${takenCount})`;
+  } else {
+    $('toggleTakenBtn').style.display = 'none';
+  }
+
+  $('agendaToolbar').style.display = baseDoses.length>0 ? 'flex' : 'none';
+  if(doses.length===0){
+    el.innerHTML = calendarSelectedDate
+      ? '<div class="empty-note">Pro tento den nejsou naplánované žádné dávky.</div>'
+      : (activePenId
+        ? '<div class="empty-note">Pro toto pero zatím nejsou naplánované žádné dávky.<br>Přidejte první přes tlačítko +.</div>'
+        : (hideTaken && baseDoses.length>0
+          ? '<div class="empty-note">Všechny nadcházející dávky jsou podané.<br>Podané dávky zobrazíte tlačítkem výše.</div>'
+          : '<div class="empty-note">Zatím žádné naplánované dávky.<br>Přidejte první přes tlačítko +.</div>'));
+    return;
+  }
+  const byDate = {};
+  doses.forEach(d=>{
+    (byDate[d.date] = byDate[d.date] || []).push(d);
+  });
+  const dates = Object.keys(byDate).sort();
+  el.innerHTML = '';
+  dates.forEach(dateStr=>{
+    const group = document.createElement('div');
+    group.className = 'day-group';
+    const lbl = dayLabel(dateStr);
+    const label = document.createElement('div');
+    label.className = 'day-label' + (lbl.today ? ' today' : '');
+    label.textContent = lbl.text;
+    group.appendChild(label);
+    const doses = byDate[dateStr].sort((a,b)=> a.time.localeCompare(b.time));
+    doses.forEach(dose=>{
+      const pen = data.pens.find(p=>p.id===dose.penId);
+      const isSelected = selectedIds.has(dose.id);
+      const row = document.createElement('div');
+      row.className = 'dose-row' + (dose.taken ? ' taken' : '') + (selectMode && isSelected ? ' row-selected' : '');
+      row.innerHTML = selectMode ? `
+        <div class="select-box ${isSelected?'checked':''}">✓</div>
+        <div class="dose-time num">${dose.time}</div>
+        <div class="dose-info">
+          <div class="dose-amount num">${fmtNum(dose.amount)} ${pen ? escapeHtml(pen.unit) : ''}</div>
+          <div class="dose-pen">${pen ? `<span class="pen-color-swatch" style="background:${getPenColor(pen)}"></span>${escapeHtml(pen.name)}` : '— pero smazáno —'}</div>
+          ${dose.note ? `<div class="dose-note">${escapeHtml(dose.note)}</div>` : ''}
+        </div>
+      ` : `
+        <div class="dose-time num">${dose.time}</div>
+        <div class="dose-info">
+          <div class="dose-amount num">${fmtNum(dose.amount)} ${pen ? escapeHtml(pen.unit) : ''}</div>
+          <div class="dose-pen">${pen ? `<span class="pen-color-swatch" style="background:${getPenColor(pen)}"></span>${escapeHtml(pen.name)}` : '— pero smazáno —'}</div>
+          ${dose.note ? `<div class="dose-note">${escapeHtml(dose.note)}</div>` : ''}
+        </div>
+        <div class="check-btn ${dose.taken ? 'checked' : ''}">✓</div>
+      `;
+      row.style.cursor = 'pointer';
+      if(selectMode){
+        row.onclick = () => toggleSelect(dose.id);
+      } else {
+        row.querySelector('.check-btn').onclick = (e) => { e.stopPropagation(); toggleDose(dose.id); };
+        row.querySelector('.dose-info').onclick = () => openDoseSheet(dose.id);
+      }
+      group.appendChild(row);
+    });
+    el.appendChild(group);
+  });
+}
+
+function toggleSelect(doseId){
+  if(selectedIds.has(doseId)) selectedIds.delete(doseId); else selectedIds.add(doseId);
+  renderAgenda();
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  $('bulkCount').textContent = `${selectedIds.size} vybráno`;
+  $('bulkDelete').disabled = selectedIds.size===0;
+}
+
+function syncSelectModeUI(){
+  $('selectToggle').style.display = selectMode ? 'none' : 'inline-block';
+  $('bulkCount').style.display = selectMode ? 'inline' : 'none';
+  $('bulkCancel').style.display = selectMode ? 'inline-block' : 'none';
+  $('bulkDelete').style.display = selectMode ? 'inline-block' : 'none';
+  $('fabAdd').style.display = selectMode ? 'none' : 'flex';
+}
+
+function setSelectMode(on){
+  selectMode = on;
+  selectedIds.clear();
+  syncSelectModeUI();
+  renderAgenda();
+  updateBulkBar();
+}
+
+function setActivePen(penId){
+  const changed = activePenId !== penId;
+  if(changed){ activePenId = penId; calendarSelectedDate = null; }
+  if(selectMode){
+    selectMode = false;
+    selectedIds.clear();
+    syncSelectModeUI();
+    render();
+    return;
+  }
+  if(changed) render();
+}
+
+function renderCalendar(){
+  const wrap = $('calendarWrap');
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const monthLabel = calendarMonth.toLocaleDateString('cs-CZ', {month:'long', year:'numeric'});
+  const firstOfMonth = new Date(year, month, 1);
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayStrVal = todayStr();
+  const weekdayLabels = ['Po','Út','St','Čt','Pá','So','Ne'];
+
+  let cellsHtml = '';
+  for(let i=0;i<firstWeekday;i++){
+    const isWeekend = i===5 || i===6;
+    cellsHtml += `<div class="calendar-day empty${isWeekend?' weekend':''}"></div>`;
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const colIdx = (firstWeekday + day - 1) % 7;
+    const isWeekend = colIdx===5 || colIdx===6;
+    const dStr = toDateStr(new Date(year, month, day));
+    const dayDoses = data.doses.filter(d=>d.date===dStr);
+    const penIdsToday = [...new Set(dayDoses.map(d=>d.penId))];
+    const dotsHtml = penIdsToday.slice(0,6).map(pid=>{
+      const pen = data.pens.find(p=>p.id===pid);
+      const color = pen ? getPenColor(pen) : '#888';
+      const allTaken = dayDoses.filter(d=>d.penId===pid).every(d=>d.taken);
+      return `<span class="calendar-dot${allTaken?' taken':''}" style="background:${color}"></span>`;
+    }).join('');
+    const isToday = dStr===todayStrVal;
+    const isSelected = calendarSelectedDate===dStr;
+    cellsHtml += `
+      <div class="calendar-day${isToday?' today':''}${isSelected?' selected':''}${isWeekend?' weekend':''}" data-date="${dStr}">
+        <div class="cal-daynum">${day}</div>
+        <div class="calendar-dots">${dotsHtml}</div>
+      </div>
+    `;
+  }
+
+  wrap.innerHTML = `
+    <div class="calendar">
+      <div class="calendar-header">
+        <button class="calendar-nav-btn" id="calPrev">‹</button>
+        <div class="cal-title">${monthLabel}</div>
+        <button class="calendar-nav-btn" id="calNext">›</button>
+      </div>
+      <div class="calendar-grid">
+        ${weekdayLabels.map((w,idx)=>`<div class="calendar-weekday${idx>=5?' weekend':''}">${w}</div>`).join('')}
+        ${cellsHtml}
+      </div>
+    </div>
+  `;
+
+  $('calPrev').onclick = () => { calendarMonth.setMonth(calendarMonth.getMonth()-1); renderCalendar(); };
+  $('calNext').onclick = () => { calendarMonth.setMonth(calendarMonth.getMonth()+1); renderCalendar(); };
+  wrap.querySelectorAll('.calendar-day[data-date]').forEach(el=>{
+    el.onclick = () => {
+      const dt = el.dataset.date;
+      calendarSelectedDate = (calendarSelectedDate===dt) ? null : dt;
+      renderCalendar();
+      renderAgenda();
+    };
+  });
+}
+
+function updateSubhead(){
+  const total = data.pens.length;
+  const upcoming = data.doses.filter(d=>!d.taken && d.date>=todayStr()).length;
+  $('subhead').textContent = total===0
+    ? 'Začněte přidáním pera'
+    : `${total} ${total===1?'pero':(total<5?'pera':'per')} · ${upcoming} nadcházejících dávek`;
+}
+
+function render(){
+  renderPensStrip();
+  if(pensListExpanded) renderPensListView();
+  $('calendarWrap').style.display = activePenId===null ? 'block' : 'none';
+  if(activePenId===null) renderCalendar();
+  renderAgenda();
+  updateSubhead();
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s==null?'':s;
+  return d.innerHTML;
+}
+
+async function toggleDose(doseId){
+  const dose = data.doses.find(d=>d.id===doseId);
+  if(!dose) return;
+  const pen = data.pens.find(p=>p.id===dose.penId);
+  let justExhausted = false;
+  if(!dose.taken){
+    const wasPositive = pen && pen.remaining > 0;
+    dose.taken = true;
+    dose.takenAt = new Date().toISOString();
+    if(pen){
+      pen.remaining = Math.round((pen.remaining - dose.amount)*1000)/1000;
+      if(pen.totalClicks && dose.clicksAmount!=null){
+        pen.remainingClicks = Math.round((pen.remainingClicks - dose.clicksAmount)*100)/100;
+      }
+      if(wasPositive && pen.remaining<=0 && !pen.archived) justExhausted = true;
+    }
+  } else {
+    dose.taken = false;
+    dose.takenAt = null;
+    if(pen){
+      pen.remaining = Math.round((pen.remaining + dose.amount)*1000)/1000;
+      if(pen.totalClicks && dose.clicksAmount!=null){
+        pen.remainingClicks = Math.round((pen.remainingClicks + dose.clicksAmount)*100)/100;
+      }
+    }
+  }
+  render();
+  await saveData();
+
+  if(justExhausted){
+    const wantsArchive = await customConfirm(`Pero „${pen.name}" je vyčerpané (0 ${pen.unit} zbývá). Chcete ho přesunout do archivu? Historie dávek zůstane zachovaná.`, 'Archivovat');
+    if(wantsArchive){
+      pen.archived = true;
+      if(activePenId===pen.id) activePenId = null;
+      render();
+      await saveData();
+      showToast('Pero archivováno — historie zůstala zachovaná');
+    }
+  }
+}
+
+/* ---- Dose sheet ---- */
+let editingDoseId = null;
+let savingDose = false;
+
+function seriesFollowers(dose){
+  if(!dose || !dose.seriesId) return [];
+  return data.doses.filter(d => d.seriesId===dose.seriesId && d.id!==dose.id && d.date>=dose.date && !d.taken);
+}
+
+function openDoseSheet(doseId){
+  if($('doseOverlay').classList.contains('open')) return;
+  if(data.pens.filter(p=>!p.archived).length===0){
+    showToast('Nejdřív přidejte pero');
+    openPenSheet(null);
+    return;
+  }
+  editingDoseId = doseId || null;
+  const dose = editingDoseId ? data.doses.find(d=>d.id===editingDoseId) : null;
+  const sel = $('dosePen');
+  let selectablePens = data.pens.filter(p=>!p.archived);
+  if(dose && !selectablePens.some(p=>p.id===dose.penId)){
+    const dosePen = data.pens.find(p=>p.id===dose.penId);
+    if(dosePen) selectablePens = [...selectablePens, dosePen];
+  }
+  sel.innerHTML = selectablePens.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.archived ? ' (archivováno)' : ''}</option>`).join('');
+
+  $('doseSheetTitle').textContent = dose ? 'Upravit dávku' : 'Nová dávka';
+  $('repeatSection').style.display = dose ? 'none' : 'block';
+  $('doseDeleteRow').style.display = dose ? 'flex' : 'none';
+
+  const followers = dose ? seriesFollowers(dose) : [];
+  $('applyScopeField').style.display = followers.length>0 ? 'block' : 'none';
+  $('applyScope').value = 'one';
+
+  if(dose){
+    $('doseDate').value = dose.date;
+    $('doseTime').value = dose.time;
+    sel.value = dose.penId;
+    $('doseAmount').value = dose.amount;
+    $('doseNote').value = dose.note || '';
+  } else {
+    $('doseDate').value = todayStr();
+    $('doseTime').value = '08:00';
+    $('doseNote').value = '';
+    $('doseAmount').value = '';
+    $('doseRepeat').value = 'days|1|1';
+    $('customRepeatRow').style.display = 'none';
+    $('untilEmptyRow').style.display = 'none';
+    repeatCountEdited = false;
+    $('repeatInterval').value = 1;
+    $('repeatFrequency').value = 'days';
+    $('repeatCount').value = 1;
+    $('untilEmptyInterval').value = 1;
+    $('untilEmptyFrequency').value = 'days';
+    if(activePenId && data.pens.some(p=>p.id===activePenId)){
+      sel.value = activePenId;
+    }
+  }
+  updateDoseUnitHint();
+  if(dose && dose.clicksAmount!=null){
+    $('doseAmountClicks').value = dose.clicksAmount;
+  }
+  $('doseOverlay').classList.add('open');
+}
+function currentPenRatio(){
+  // clicks per unit (mg/ml/etc.) for the currently selected pen, or null if not tracked
+  const pen = data.pens.find(p=>p.id===$('dosePen').value);
+  if(!pen || !pen.totalClicks || !pen.total) return null;
+  return pen.totalClicks / pen.total;
+}
+function updateDoseUnitHint(){
+  const pen = data.pens.find(p=>p.id===$('dosePen').value);
+  $('doseUnitHint').textContent = pen ? `Jednotka: ${pen.unit} · zbývá ${fmtNum(pen.remaining)} ${pen.unit}` : '';
+  $('doseAmountClicks').value = '';
+  if(pen && pen.totalClicks){
+    $('doseClicksField').style.display = 'block';
+    const ratio = currentPenRatio();
+    $('doseClicksHint').textContent = ratio ? `1 kliknutí ≈ ${fmtNum(1/ratio)} ${pen.unit} · zbývá ${fmtNum(pen.remainingClicks)} kliknutí` : '';
+  } else {
+    $('doseClicksField').style.display = 'none';
+  }
+}
+$('dosePen').addEventListener('change', ()=>{
+  updateDoseUnitHint();
+  if($('doseRepeat').value==='untilEmpty') updateUntilEmptyEstimate();
+  suggestRepeatCount();
+});
+$('doseAmount').addEventListener('input', ()=>{
+  const ratio = currentPenRatio();
+  const val = parseFloat($('doseAmount').value);
+  if(ratio && !isNaN(val)){
+    $('doseAmountClicks').value = Math.round(val*ratio*100)/100;
+  }
+  if($('doseRepeat').value==='untilEmpty') updateUntilEmptyEstimate();
+  suggestRepeatCount();
+});
+$('doseAmountClicks').addEventListener('input', ()=>{
+  const ratio = currentPenRatio();
+  const val = parseFloat($('doseAmountClicks').value);
+  if(ratio && !isNaN(val)){
+    $('doseAmount').value = Math.round((val/ratio)*1000)/1000;
+  }
+});
+$('doseRepeat').addEventListener('change', ()=>{
+  const rv = $('doseRepeat').value;
+  $('customRepeatRow').style.display = rv==='custom' ? 'flex' : 'none';
+  $('untilEmptyRow').style.display = rv==='untilEmpty' ? 'flex' : 'none';
+  if(rv==='untilEmpty') updateUntilEmptyEstimate();
+  if(rv==='custom') suggestRepeatCount();
+});
+$('repeatCount').addEventListener('input', () => { repeatCountEdited = true; });
+let repeatCountEdited = false;
+function suggestRepeatCount(){
+  if($('doseRepeat').value!=='custom' || repeatCountEdited) return;
+  const est = untilEmptyCount();
+  if(est>0) $('repeatCount').value = est;
+}
+$('untilEmptyInterval').addEventListener('input', updateUntilEmptyEstimate);
+function untilEmptyCount(){
+  const pen = data.pens.find(p=>p.id===$('dosePen').value);
+  const amount = parseFloat($('doseAmount').value);
+  if(!pen || isNaN(amount) || amount<=0) return 0;
+  return Math.max(0, Math.floor((pen.remaining / amount) + 1e-9));
+}
+function updateUntilEmptyEstimate(){
+  const count = untilEmptyCount();
+  $('untilEmptyCount').value = count>0 ? `≈ ${count} dávek` : 'pero je prázdné';
+}
+$('doseCancel').onclick = () => $('doseOverlay').classList.remove('open');
+
+$('doseSave').onclick = async () => {
+  if(savingDose) return;
+  const date = $('doseDate').value;
+  const time = $('doseTime').value;
+  const penId = $('dosePen').value;
+  const amount = parseFloat($('doseAmount').value);
+  const note = $('doseNote').value.trim();
+  if(!date || !time || !penId || isNaN(amount) || amount<=0){
+    showToast('Vyplňte datum, čas a dávku');
+    return;
+  }
+  savingDose = true;
+  $('doseSave').disabled = true;
+  try{
+    const ratio = currentPenRatio();
+    const clicksAmount = ratio ? Math.round(amount*ratio*100)/100 : null;
+
+    if(editingDoseId){
+      const dose = data.doses.find(d=>d.id===editingDoseId);
+      const applyFollowing = $('applyScopeField').style.display!=='none' && $('applyScope').value==='following';
+      const followers = applyFollowing ? seriesFollowers(dose) : [];
+      const originalDate = dose.date;
+
+      if(dose.taken){
+        const oldPen = data.pens.find(p=>p.id===dose.penId);
+        if(oldPen){
+          oldPen.remaining = Math.round((oldPen.remaining + dose.amount)*1000)/1000;
+          if(oldPen.totalClicks && dose.clicksAmount!=null){
+            oldPen.remainingClicks = Math.round((oldPen.remainingClicks + dose.clicksAmount)*100)/100;
+          }
+        }
+      }
+      dose.date = date; dose.time = time; dose.penId = penId;
+      dose.amount = amount; dose.note = note; dose.clicksAmount = clicksAmount;
+      if(dose.taken){
+        const newPen = data.pens.find(p=>p.id===penId);
+        if(newPen){
+          newPen.remaining = Math.round((newPen.remaining - dose.amount)*1000)/1000;
+          if(newPen.totalClicks && dose.clicksAmount!=null){
+            newPen.remainingClicks = Math.round((newPen.remainingClicks - dose.clicksAmount)*100)/100;
+          }
+        }
+      }
+      // followers are always untaken (filtered in seriesFollowers), so no pen adjustment needed —
+      // each keeps its own date, but shifts by the same number of days the edited dose moved
+      // (e.g. correcting Saturday → Sunday shifts the whole series' weekday, not just this one)
+      const deltaDays = Math.round((new Date(date+'T00:00:00') - new Date(originalDate+'T00:00:00')) / 86400000);
+      followers.forEach(f=>{
+        f.time = time; f.penId = penId; f.amount = amount; f.note = note; f.clicksAmount = clicksAmount;
+        if(deltaDays !== 0){
+          f.date = shiftDateByDays(f.date, deltaDays);
+        }
+      });
+
+      $('doseOverlay').classList.remove('open');
+      render();
+      await saveData();
+      showToast(followers.length>0 ? `Upraveno ${followers.length+1} dávek` : 'Dávka upravena');
+      return;
+    }
+
+    let unit='days', interval=1, count=1;
+    const rv = $('doseRepeat').value;
+    if(rv==='custom'){
+      unit = $('repeatFrequency').value;
+      interval = Math.max(1, parseInt($('repeatInterval').value)||1);
+      count = Math.max(1, parseInt($('repeatCount').value)||1);
+    } else if(rv==='untilEmpty'){
+      unit = $('untilEmptyFrequency').value;
+      interval = Math.max(1, parseInt($('untilEmptyInterval').value)||1);
+      count = untilEmptyCount();
+      if(count<=0){
+        showToast('Pero je již prázdné — snižte dávku nebo doplňte pero');
+        return;
+      }
+    } else {
+      const parts = rv.split('|');
+      unit = parts[0]; interval = Number(parts[1]); count = Number(parts[2]);
+    }
+    const baseDate = new Date(date+'T00:00:00');
+    const seriesId = uid();
+    for(let i=0;i<count;i++){
+      const dt = addInterval(baseDate, unit, i*interval);
+      data.doses.push({
+        id: uid(),
+        date: toDateStr(dt),
+        time, penId, amount, note, clicksAmount, seriesId,
+        taken:false, takenAt:null
+      });
+    }
+    $('doseOverlay').classList.remove('open');
+    render();
+    await saveData();
+    showToast(count>1 ? `Přidáno ${count} dávek` : 'Dávka přidána');
+  } finally {
+    savingDose = false;
+    $('doseSave').disabled = false;
+  }
+};
+
+$('doseDelete').onclick = async () => {
+  if(!editingDoseId) return;
+  const dose = data.doses.find(d=>d.id===editingDoseId);
+  if(dose && dose.taken){
+    const pen = data.pens.find(p=>p.id===dose.penId);
+    if(pen){
+      pen.remaining = Math.round((pen.remaining + dose.amount)*1000)/1000;
+      if(pen.totalClicks && dose.clicksAmount!=null){
+        pen.remainingClicks = Math.round((pen.remainingClicks + dose.clicksAmount)*100)/100;
+      }
+    }
+  }
+  data.doses = data.doses.filter(d=>d.id!==editingDoseId);
+  $('doseOverlay').classList.remove('open');
+  render();
+  await saveData();
+  showToast('Dávka smazána');
+};
+
+/* ---- Pen sheet ---- */
+function openPenSheet(penId){
+  editingPenId = penId;
+  const pen = penId ? data.pens.find(p=>p.id===penId) : null;
+  $('penSheetTitle').textContent = pen ? 'Upravit pero' : 'Nové pero';
+  $('penName').value = pen ? pen.name : '';
+  $('penTotal').value = pen ? pen.total : '';
+  $('penUnit').value = pen ? pen.unit : '';
+  $('penRemainField').style.display = pen ? 'block' : 'none';
+  $('penRemain').value = pen ? pen.remaining : '';
+  $('penClicks').value = (pen && pen.totalClicks) ? pen.totalClicks : '';
+  $('penRemainClicksField').style.display = (pen && pen.totalClicks) ? 'block' : 'none';
+  $('penRemainClicks').value = (pen && pen.totalClicks) ? pen.remainingClicks : '';
+  $('penDeleteRow').style.display = pen ? 'flex' : 'none';
+  $('penHardDeleteRow').style.display = pen ? 'flex' : 'none';
+  $('penArchiveHint').style.display = pen ? 'block' : 'none';
+  remainClicksEdited = !!pen; // editing an existing pen: don't auto-overwrite its stored remainder
+  renderColorSwatches();
+  hideCustomColorStaging();
+  const defaultColor = pen ? getPenColor(pen) : PEN_COLORS[data.pens.filter(p=>!p.archived).length % PEN_COLORS.length];
+  selectPenColor(defaultColor);
+  $('penOverlay').classList.add('open');
+}
+$('penCancel').onclick = () => $('penOverlay').classList.remove('open');
+let remainClicksEdited = false;
+$('penClicks').addEventListener('input', ()=>{
+  const has = parseFloat($('penClicks').value) > 0;
+  $('penRemainClicksField').style.display = has ? 'block' : 'none';
+  if(has && !remainClicksEdited){
+    $('penRemainClicks').value = $('penClicks').value;
+  }
+});
+$('penRemainClicks').addEventListener('input', ()=>{
+  remainClicksEdited = true;
+});
+
+$('penSave').onclick = async () => {
+  const name = $('penName').value.trim();
+  const total = parseFloat($('penTotal').value);
+  const unit = $('penUnit').value.trim();
+  if(!name || isNaN(total) || total<=0 || !unit){
+    showToast('Vyplňte název, objem a jednotku');
+    return;
+  }
+  const clicksVal = parseFloat($('penClicks').value);
+  const totalClicks = (!isNaN(clicksVal) && clicksVal>0) ? clicksVal : null;
+  if(editingPenId){
+    const pen = data.pens.find(p=>p.id===editingPenId);
+    pen.name = name; pen.total = total; pen.unit = unit; pen.color = selectedPenColor;
+    const remainVal = parseFloat($('penRemain').value);
+    pen.remaining = isNaN(remainVal) ? pen.remaining : remainVal;
+    pen.totalClicks = totalClicks;
+    if(totalClicks){
+      const remainClicksVal = parseFloat($('penRemainClicks').value);
+      pen.remainingClicks = isNaN(remainClicksVal) ? totalClicks : remainClicksVal;
+    } else {
+      pen.remainingClicks = null;
+    }
+  } else {
+    data.pens.push({
+      id: uid(), name, total, unit, remaining: total,
+      totalClicks, remainingClicks: totalClicks, archived:false,
+      color: selectedPenColor
+    });
+  }
+  $('penOverlay').classList.remove('open');
+  render();
+  await saveData();
+  showToast('Uloženo');
+};
+
+$('penArchive').onclick = async () => {
+  if(!editingPenId) return;
+  const pen = data.pens.find(p=>p.id===editingPenId);
+  if(pen) pen.archived = true;
+  if(activePenId===editingPenId) activePenId = null;
+  $('penOverlay').classList.remove('open');
+  render();
+  await saveData();
+  showToast('Pero archivováno — historie zůstala zachovaná');
+};
+
+$('penDelete').onclick = async () => {
+  if(!editingPenId) return;
+  const pen = data.pens.find(p=>p.id===editingPenId);
+  if(!(await customConfirm(`Opravdu trvale smazat pero „${pen ? pen.name : ''}" včetně celé historie dávek? Tuto akci nelze vrátit zpět.`))) return;
+  data.pens = data.pens.filter(p=>p.id!==editingPenId);
+  data.doses = data.doses.filter(d=>d.penId!==editingPenId);
+  if(activePenId===editingPenId) activePenId = null;
+  $('penOverlay').classList.remove('open');
+  render();
+  await saveData();
+  showToast('Pero trvale smazáno');
+};
+
+/* ---- FAB ---- */
+$('toggleTakenBtn').onclick = () => { showTakenInAll = !showTakenInAll; renderAgenda(); };
+$('selectToggle').onclick = () => setSelectMode(!selectMode);
+$('bulkCancel').onclick = () => setSelectMode(false);
+$('bulkDelete').onclick = async () => {
+  if(selectedIds.size===0) return;
+  const count = selectedIds.size;
+  if(!(await customConfirm(`Opravdu smazat ${count} vybraných dávek?`))) return;
+  selectedIds.forEach(id=>{
+    const dose = data.doses.find(d=>d.id===id);
+    if(dose && dose.taken){
+      const pen = data.pens.find(p=>p.id===dose.penId);
+      if(pen){
+        pen.remaining = Math.round((pen.remaining + dose.amount)*1000)/1000;
+        if(pen.totalClicks && dose.clicksAmount!=null){
+          pen.remainingClicks = Math.round((pen.remainingClicks + dose.clicksAmount)*100)/100;
+        }
+      }
+    }
+  });
+  data.doses = data.doses.filter(d=>!selectedIds.has(d.id));
+  setSelectMode(false);
+  render();
+  await saveData();
+  showToast(`Smazáno ${count} dávek`);
+};
+$('fabAdd').onclick = () => openDoseSheet();
+
+function backupFilename(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `zaloha-peptidovy-denicek-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
+}
+
+function formatCzDate(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  return d.toLocaleDateString('cs-CZ', {day:'numeric', month:'numeric', year:'numeric'});
+}
+
+function buildBackupSummaryHtml(fileName, parsed){
+  const penRowsHtml = parsed.pens.map((p, idx) => {
+    const color = p.color || PEN_COLORS[idx % PEN_COLORS.length];
+    const penDoses = parsed.doses.filter(d=>d.penId===p.id);
+    let rangeStr = '—';
+    if(penDoses.length>0){
+      const dates = penDoses.map(d=>d.date).sort();
+      const first = dates[0], last = dates[dates.length-1];
+      rangeStr = first===last ? formatCzDate(first) : `${formatCzDate(first)} – ${formatCzDate(last)}`;
+    }
+    const doseWord = penDoses.length===1?'dávka':(penDoses.length<5?'dávky':'dávek');
+    return `
+      <div class="fic-pen-row">
+        <span class="pen-color-swatch" style="background:${color}"></span>
+        <b>${escapeHtml(p.name)}</b> — ${penDoses.length} ${doseWord}${penDoses.length>0?` · ${rangeStr}`:''}
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="fic-name">${escapeHtml(fileName)}</div>
+    <div class="fic-line" style="margin-bottom:8px;">${parsed.pens.length} ${parsed.pens.length===1?'pero':(parsed.pens.length<5?'pera':'per')} celkem</div>
+    ${penRowsHtml || '<div class="fic-line">Žádná pera</div>'}
+  `;
+}
+
+/* ---- Backup (export only) ---- */
+function openBackupSheet(){
+  $('backupText').value = JSON.stringify(data, null, 2);
+  $('backupOverlay').classList.add('open');
+}
+$('openBackup').onclick = openBackupSheet;
+$('backupClose').onclick = () => $('backupOverlay').classList.remove('open');
+
+$('backupDownload').onclick = () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = backupFilename();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showToast('Stahování zálohy spuštěno');
+};
+
+$('backupCopy').onclick = async () => {
+  $('backupText').focus();
+  $('backupText').select();
+  try{
+    await navigator.clipboard.writeText($('backupText').value);
+    showToast('Zkopírováno do schránky');
+  }catch(e){
+    showToast('Text je označený — zkopírujte přes Ctrl/Cmd+C');
+  }
+};
+
+/* ---- Restore (import only) ---- */
+let pickedRestoreData = null;
+
+function openRestoreSheet(){
+  $('restoreText').value = '';
+  pickedRestoreData = null;
+  $('restoreFileInfo').style.display = 'none';
+  $('restoreFileRow').style.display = 'none';
+  $('restoreOverlay').classList.add('open');
+}
+$('openRestore').onclick = openRestoreSheet;
+$('restoreClose').onclick = () => $('restoreOverlay').classList.remove('open');
+
+async function applyRestoredData(parsed){
+  if(!(await customConfirm('Opravdu přepsat aktuální data touto zálohou? Nezálohovaná aktuální data se nenávratně ztratí.', 'Obnovit'))) return;
+  data = parsed;
+  data.customPenColors = data.customPenColors || [];
+  activePenId = null;
+  calendarSelectedDate = null;
+  if(selectMode) setSelectMode(false);
+  $('restoreOverlay').classList.remove('open');
+  render();
+  await saveData();
+  showToast('Obnoveno ze zálohy');
+}
+
+$('restorePickFile').onclick = () => $('restoreFileInput').click();
+$('restoreFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = ''; // allow picking the same file again later
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try{
+      parsed = JSON.parse(reader.result);
+    }catch(err){
+      showToast('Soubor se nepodařilo přečíst jako platnou zálohu');
+      return;
+    }
+    if(!parsed || !Array.isArray(parsed.pens) || !Array.isArray(parsed.doses)){
+      showToast('Tohle nevypadá jako platná záloha appky');
+      return;
+    }
+    pickedRestoreData = parsed;
+    $('restoreFileInfo').style.display = 'block';
+    $('restoreFileInfo').innerHTML = buildBackupSummaryHtml(file.name, parsed);
+    $('restoreFileRow').style.display = 'flex';
+  };
+  reader.onerror = () => showToast('Soubor se nepodařilo přečíst');
+  reader.readAsText(file);
+});
+$('restoreFromFile').onclick = async () => {
+  if(!pickedRestoreData) return;
+  await applyRestoredData(pickedRestoreData);
+  pickedRestoreData = null;
+};
+
+$('restoreFromText').onclick = async () => {
+  let parsed;
+  try{
+    parsed = JSON.parse($('restoreText').value);
+  }catch(e){
+    showToast('Neplatný formát zálohy — zkontrolujte vložený text');
+    return;
+  }
+  if(!parsed || !Array.isArray(parsed.pens) || !Array.isArray(parsed.doses)){
+    showToast('Tohle nevypadá jako platná záloha appky');
+    return;
+  }
+  await applyRestoredData(parsed);
+};
+
+function openFontSizeSheet(){
+  const current = data.fontScale || 1;
+  $('fontScaleSlider').value = current;
+  updateFontScaleLabel(current);
+  $('fontSizeOverlay').classList.add('open');
+}
+$('openFontSize').onclick = openFontSizeSheet;
+$('fontScaleSlider').addEventListener('input', (e) => {
+  const v = parseFloat(e.target.value);
+  document.documentElement.style.setProperty('--font-scale', v);
+  updateFontScaleLabel(v);
+});
+function updateFontScaleLabel(v){
+  $('fontScaleValue').textContent = Math.round(v*100) + ' %';
+}
+$('fontSizeCancel').onclick = () => {
+  document.documentElement.style.setProperty('--font-scale', data.fontScale || 1);
+  $('fontSizeOverlay').classList.remove('open');
+};
+$('fontSizeOk').onclick = async () => {
+  data.fontScale = parseFloat($('fontScaleSlider').value);
+  $('fontSizeOverlay').classList.remove('open');
+  await saveData();
+  showToast('Velikost textu uložena');
+};
+
+loadData();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {
+      // no-op: fails silently when opened as a local file or without HTTPS —
+      // starts working automatically once the app is hosted
+    });
+  });
+}
+</script>
+</body>
+</html>
