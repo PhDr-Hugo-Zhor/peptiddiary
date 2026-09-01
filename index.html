@@ -275,6 +275,12 @@
     margin-bottom:10px;
     gap:12px;
   }
+  .agenda-toolbar-bottom{
+    margin-top:14px;
+    margin-bottom:0;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
   .select-toggle{
     background:none;
     border:none;
@@ -514,7 +520,7 @@
   .dose-note{font-size:calc(13.5px * var(--font-scale, 1)); color:var(--ink-soft); margin-top:2px; font-style:italic;}
   .dose-shortfall{font-size:calc(12.5px * var(--font-scale, 1)); color:var(--amber); font-weight:650; margin-top:3px;}
   .dose-row.taken .dose-amount,
-  .dose-row.taken .dose-pen{color:var(--ink-soft); text-decoration:line-through; text-decoration-color:var(--line);}
+  .dose-row.taken .dose-pen{color:var(--ink-soft); text-decoration:line-through; text-decoration-color:var(--teal); text-decoration-thickness:2px;}
   .check-btn{
     flex:0 0 auto;
     width:30px;height:30px;
@@ -692,6 +698,13 @@
     </div>
   </div>
   <div id="agendaContent" class="loading">Načítám…</div>
+  <div class="agenda-toolbar agenda-toolbar-bottom" id="agendaToolbarBottom" style="display:none;">
+    <span class="bulk-count" id="bulkCountBottom">0 vybráno</span>
+    <div class="toolbar-actions">
+      <button class="select-toggle" id="bulkCancelBottom">Zrušit</button>
+      <button class="select-toggle danger" id="bulkDeleteBottom">Smazat</button>
+    </div>
+  </div>
 </main>
 
 <button class="fab" id="fabAdd">+</button>
@@ -1455,6 +1468,8 @@ function toggleSelect(doseId){
 function updateBulkBar(){
   $('bulkCount').textContent = `${selectedIds.size} vybráno`;
   $('bulkDelete').disabled = selectedIds.size===0;
+  $('bulkCountBottom').textContent = `${selectedIds.size} vybráno`;
+  $('bulkDeleteBottom').disabled = selectedIds.size===0;
 }
 
 function syncSelectModeUI(){
@@ -1462,6 +1477,7 @@ function syncSelectModeUI(){
   $('bulkCount').style.display = selectMode ? 'inline' : 'none';
   $('bulkCancel').style.display = selectMode ? 'inline-block' : 'none';
   $('bulkDelete').style.display = selectMode ? 'inline-block' : 'none';
+  $('agendaToolbarBottom').style.display = selectMode ? 'flex' : 'none';
   $('fabAdd').style.display = selectMode ? 'none' : 'flex';
 }
 
@@ -2001,8 +2017,7 @@ $('penDelete').onclick = async () => {
 /* ---- FAB ---- */
 $('toggleTakenBtn').onclick = () => { showTakenInAll = !showTakenInAll; renderAgenda(); };
 $('selectToggle').onclick = () => setSelectMode(!selectMode);
-$('bulkCancel').onclick = () => setSelectMode(false);
-$('bulkDelete').onclick = async () => {
+async function performBulkDelete(){
   if(selectedIds.size===0) return;
   const count = selectedIds.size;
   if(!(await customConfirm(`Opravdu smazat ${count} vybraných dávek?`))) return;
@@ -2023,7 +2038,11 @@ $('bulkDelete').onclick = async () => {
   render();
   await saveData();
   showToast(`Smazáno ${count} dávek`);
-};
+}
+$('bulkCancel').onclick = () => setSelectMode(false);
+$('bulkDelete').onclick = performBulkDelete;
+$('bulkCancelBottom').onclick = () => setSelectMode(false);
+$('bulkDeleteBottom').onclick = performBulkDelete;
 $('fabAdd').onclick = () => openDoseSheet();
 
 function backupFilename(){
