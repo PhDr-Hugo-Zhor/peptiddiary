@@ -965,11 +965,12 @@ function showToast(msg){
 }
 
 let confirmResolve = null;
-function customConfirm(message, okLabel){
+function customConfirm(message, okLabel, cancelLabel){
   return new Promise(resolve=>{
     confirmResolve = resolve;
     $('confirmMessage').textContent = message;
     $('confirmOk').textContent = okLabel || 'Smazat';
+    $('confirmCancel').textContent = cancelLabel || 'Zrušit';
     $('confirmOverlay').classList.add('open');
   });
 }
@@ -1822,6 +1823,46 @@ $('doseSave').onclick = async () => {
       const parts = rv.split('|');
       unit = parts[0]; interval = Number(parts[1]); count = Number(parts[2]);
     }
+
+    const capPen = data.pens.find(p=>p.id===penId);
+    if(capPen){
+      const totalNeededMg = Math.round(amount*count*1000)/1000;
+      const alreadyScheduledMg = data.doses
+        .filter(d=>d.penId===penId && !d.taken)
+        .reduce((sum,d)=>sum+d.amount, 0);
+      const availableMg = Math.round((capPen.remaining - alreadyScheduledMg)*1000)/1000;
+      if(totalNeededMg > availableMg + 1e-9){
+        let maxFitCount = Math.floor((availableMg / amount) + 1e-9);
+        let totalNeededClicks = null, availableClicks = null;
+        if(capPen.totalClicks && clicksAmount){
+          totalNeededClicks = Math.round(clicksAmount*count*100)/100;
+          const alreadyScheduledClicks = data.doses
+            .filter(d=>d.penId===penId && !d.taken && d.clicksAmount!=null)
+            .reduce((sum,d)=>sum+d.clicksAmount, 0);
+          availableClicks = Math.round((capPen.remainingClicks - alreadyScheduledClicks)*100)/100;
+          const maxFitByClicks = Math.floor((availableClicks / clicksAmount) + 1e-9);
+          maxFitCount = Math.min(maxFitCount, maxFitByClicks);
+        }
+        maxFitCount = Math.max(0, maxFitCount);
+        const clicksNeededPart = totalNeededClicks!=null ? ` / ${fmtNum(totalNeededClicks)} kliknutí` : '';
+        const clicksAvailPart = availableClicks!=null ? ` / ${fmtNum(availableClicks)} kliknutí` : '';
+        let msg = `Zadané dávkování přesahuje objem pera. Naplánovaný rozsah vychází na ${fmtNum(totalNeededMg)} ${capPen.unit}${clicksNeededPart}, přičemž po odečtení už naplánovaných dávek v peru zbývá jen ${fmtNum(Math.max(0,availableMg))} ${capPen.unit}${clicksAvailPart}.`;
+        if(maxFitCount>0){
+          msg += ` Chcete automaticky zkrátit rozsah užívání na ${maxFitCount} ${maxFitCount===1?'dávku':(maxFitCount<5?'dávky':'dávek')} podle nastavené frekvence a velikosti dávky?`;
+          const shouldShorten = await customConfirm(msg, 'Zkrátit automaticky', 'Uložit bez zkrácení');
+          if(shouldShorten) count = maxFitCount;
+        } else {
+          msg += ' Pero nemá dostatek objemu ani na jednu takovou dávku. Opravdu ji přesto chcete uložit?';
+          const proceedAnyway = await customConfirm(msg, 'Uložit i tak', 'Zrušit');
+          if(!proceedAnyway){
+            savingDose = false;
+            $('doseSave').disabled = false;
+            return;
+          }
+        }
+      }
+    }
+
     const baseDate = new Date(date+'T00:00:00');
     const seriesId = uid();
     for(let i=0;i<count;i++){
