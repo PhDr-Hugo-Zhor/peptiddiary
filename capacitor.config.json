@@ -1,0 +1,9 @@
+{
+  "appId": "cz.peptidovydenicek.app",
+  "appName": "Peptidový deníček",
+  "webDir": "www",
+  "backgroundColor": "#15181A",
+  "android": {
+    "backgroundColor": "#15181A"
+  }
+}

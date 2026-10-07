@@ -1,0 +1,14 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+/build
+/app/build
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+/_PeptDiary
+node_modules/
+www/
+*.log
